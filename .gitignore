@@ -46,6 +46,14 @@ Thumbs.db
 *.iml
 *.ipr
 
+# Gradle #
+######################
+.gradle
+/build/
+gradle-app.setting
+/gradle/
+.gradletasknamecache
+
 
 # Privacy #
 ######################
