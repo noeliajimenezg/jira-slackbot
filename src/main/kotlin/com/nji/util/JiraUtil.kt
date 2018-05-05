@@ -103,13 +103,7 @@ class JiraUtil {
         fun detectNewIssues(
                 issuesMap: MutableMap<String, MutableMap<String, String>>,
                 storedIssuesByLine: MutableList<String>): MutableMap<String, MutableMap<String, String>> {
-
-            val newIssuesMap = mutableMapOf<String, MutableMap<String, String>>()
-            issuesMap.keys.forEach { issueKey ->
-                if (issueKey !in storedIssuesByLine.toString()) {
-                    newIssuesMap.putIfAbsent(issueKey, issuesMap.get(issueKey)!!)
-                }
-            }
+            val newIssuesMap = issuesMap.filter { it.key !in storedIssuesByLine.toString() }.toMutableMap()
             logger.info("New anomalies detected: {}", newIssuesMap.size)
             return newIssuesMap
         }
@@ -131,13 +125,11 @@ class JiraUtil {
                 priorities: List<String>,
                 priorityName: String): List<String> {
 
-            val storedIssuesByLineUpdated = arrayOfNulls<String>(priorities.size)
-
-            var i = 0
             // Store the issues that are still in working progress
-            storedIssuesByPriority.forEach { storedIssuesLine ->
+            val storedIssuesByLineUpdated: List<String> = storedIssuesByPriority.map { it ->
+
                 // The issues are separated by ';'
-                val issues = storedIssuesLine.split(";")
+                val issues = it.split(";")
                 val sb = StringBuilder()
                 for (issueKey in issues) {
                     // Issues that were already in the file and they're still in working progress
@@ -145,21 +137,17 @@ class JiraUtil {
                         sb.append(issueKey).append(";")
                     }
                 }
-                storedIssuesByLineUpdated[i] = sb.toString()
-                i++
-            }
-            // Store the issues that are new in their right line (line represents a priority)
+                sb.toString()
+             }
+
+             // Store the issues that are new in their right line (line represents a priority)
             newIssuesMap.forEach { newIssue ->
-                val priority = newIssue.value.get(priorityName)
+                val priority = newIssue.value[priorityName]
                 val position = priorities.indexOf(priority)
-                if (storedIssuesByLineUpdated[position] != null) {
-                    storedIssuesByLineUpdated[position] = storedIssuesByLineUpdated[position] + newIssue.key + ";"
-                } else {
-                    storedIssuesByLineUpdated[position] = newIssue.key + ";"
-                }
+                storedIssuesByLineUpdated[position] += newIssue.key + ";"
             }
-            // Convert to List<String>
-            return storedIssuesByLineUpdated.toMutableList().filterNotNull()
+
+            return storedIssuesByLineUpdated
         }
 
         /**
@@ -206,4 +194,8 @@ class JiraUtil {
         }
 
     }
+}
+
+private operator fun <E> List<E>.set(position: Int, value: E) {
+    this[position] = value
 }
