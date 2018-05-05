@@ -1,13 +1,11 @@
 package com.nji.util
 
 import com.nji.conf.SlackSubfield
-import com.ullink.slack.simpleslackapi.SlackAttachment
-import com.ullink.slack.simpleslackapi.SlackChannel
-import com.ullink.slack.simpleslackapi.SlackPreparedMessage
-import com.ullink.slack.simpleslackapi.SlackSession
+import com.ullink.slack.simpleslackapi.*
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory
 import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
+
 
 class SlackUtil{
 
@@ -33,10 +31,15 @@ class SlackUtil{
                 subfields: MutableMap<String, SlackSubfield>,
                 priorityName: String,
                 priorities: List<String>,
+                proxy: String,
+                proxyPort: String,
                 newIssuesMap: MutableMap<String, MutableMap<String, String>>) {
 
             val session : SlackSession = SlackSessionFactory.createWebSocketSlackSession(token)
-            session.connect()
+
+            if (!session.isConnected) {
+                session.connect()
+            }
 
             for(priority in priorities){
                 for(issue in newIssuesMap){
@@ -45,15 +48,18 @@ class SlackUtil{
                         val position = priorities.indexOf(priorityIssue)
                         val channel : SlackChannel = session.findChannelByName(channels[position])
                         val color : String = colors[position]
-                        session.sendMessage(channel, buildSlackMessage(fields, subfields, issue.value, color))
+                        session.sendMessage(channel,buildSlackMessage(fields, subfields, issue.value, color))
                         logger.info("Message sent to Slack: {}", issue.key)
 
                     }
                 }
             }
+
+            if (session.isConnected) {
+                session.disconnect()
+            }
+
         }
-
-
 
         /**
          * Build the Slack message.
@@ -71,8 +77,9 @@ class SlackUtil{
             slackAttachment.color = color
             slackAttachment.title = issue[fields["slack-message.title"]]
             slackAttachment.titleLink = issue[fields["slack-message.title-link"]]
-            // Description is too long for Slack
-            if (fields["slack-message.text"] != null) {
+
+            // Description is too long for Slack so it could not be suitable
+            if (fields["slack-message.text"] != null && issue[fields["slack-message.text"]] != null) {
                 val textFormatted = Jsoup.parse(issue[fields["slack-message.text"]]).text()
                 slackAttachment.text = textFormatted
             }
@@ -87,8 +94,5 @@ class SlackUtil{
                     .addAttachment(slackAttachment)
                     .build()
         }
-
-
-
     }
 }

@@ -1,7 +1,7 @@
 buildscript {
     ext.kotlin_version = '1.2.30'
     ext.spring_boot_version = '2.0.1.RELEASE'
-    ext.jersey_version = '1.9.1'
+    ext.jersey_version = '1.19.4'
     ext.simple_slack_version = '1.2.0'
     ext.jsoup_version = '1.8.3'
 
@@ -35,7 +35,6 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
-    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
@@ -43,10 +42,10 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.springframework.boot:spring-boot-starter-web:$spring_boot_version"
     compile "com.sun.jersey:jersey-client:$jersey_version"
-    compile "com.github.Ullink:simple-slack-api:$simple_slack_version"
+    compile "com.ullink.slack:simpleslackapi:$simple_slack_version"
     compile "org.jsoup:jsoup:$jsoup_version"
 
-
+    testCompile group: 'org.glassfish.jersey.connectors', name: 'jersey-apache-connector', version: '2.26'
     testCompile group: 'junit', name: 'junit', version: '4.12'
     testCompile 'org.springframework.boot:spring-boot-starter-test'
 }

@@ -10,7 +10,6 @@ class FileUtil{
 
         val logger = LoggerFactory.getLogger(FileUtil::class.java)
 
-
         /**
          * Read from local file the JIRA issues that were already stored.
          * @property localFileStoredIssues path to the local file.
@@ -24,8 +23,6 @@ class FileUtil{
             return localStoredIssuesLineList
         }
 
-
-
         /**
          * Save issues to file.
          * @property storedIssuesByLineUpdated the list of issues ordered by priority.
@@ -34,13 +31,10 @@ class FileUtil{
         fun saveIssuesToFile(storedIssuesByLineUpdated: ArrayList<String>, localFileStoredIssues: String) {
             File(localFileStoredIssues).bufferedWriter().use { out ->
                 storedIssuesByLineUpdated.forEach{
-                    out.write(it); out.newLine()
+                    out.append(it + System.lineSeparator())
                 }
             }
             logger.info("File was saved")
         }
-
-
-
     }
 }

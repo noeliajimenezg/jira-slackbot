@@ -14,6 +14,9 @@ server:
   port: 49200
 
 jira:
+  proxy:                                #In case of need
+  proxy-port:                           #In case of need
+  java-home:                            #In case of need
   startTime: "08:00"                    #Check begins at this time
   endTime: "19:00"                      #Check ends at this time
   minutes: 15                           #Check every X minutes
