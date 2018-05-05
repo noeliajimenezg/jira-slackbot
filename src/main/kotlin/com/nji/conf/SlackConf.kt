@@ -9,6 +9,6 @@ class SlackConf {
     lateinit var token: String
     var channels = listOf<String>()
     var colors = listOf<String>()
-    var fields:HashMap<String, String> = hashMapOf()
-    var subfields:HashMap<String, SlackSubfield> = hashMapOf()
+    var fields: HashMap<String, String> = hashMapOf()
+    var subfields: HashMap<String, SlackSubfield> = hashMapOf()
 }

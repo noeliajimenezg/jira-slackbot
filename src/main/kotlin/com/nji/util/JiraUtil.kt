@@ -9,14 +9,14 @@ import org.springframework.http.HttpStatus
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.io.ByteArrayInputStream
+import java.util.*
 import javax.naming.AuthenticationException
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.soap.Node
 import kotlin.collections.ArrayList
-import java.util.*
 
 
-class JiraUtil{
+class JiraUtil {
 
     companion object {
 
@@ -58,9 +58,9 @@ class JiraUtil{
                 url: String,
                 filterId: String): String {
 
-            val auth = String(Base64.encode(username + ":" + password))
+            val auth = String(Base64.encode("$username:$password"))
             val client = Client.create()
-            val webResource = client.resource(url + "/sr/jira.issueviews:searchrequest-xml/" + filterId + "/SearchRequest-" + filterId + ".xml?tempMax=1000")
+            val webResource = client.resource("$url/sr/jira.issueviews:searchrequest-xml/$filterId/SearchRequest-$filterId.xml?tempMax=1000")
             val response = webResource.header("Authorization", "Basic $auth")
                     .type("application/json")
                     .accept("application/json")
@@ -78,11 +78,11 @@ class JiraUtil{
          * @property proxyPort
          * @property javaHome
          */
-        fun setSystemProperties(proxy: String, proxyPort: String, javaHome: String){
-            val sysProperties : Properties = Properties()
+        fun setSystemProperties(proxy: String, proxyPort: String, javaHome: String) {
+            val sysProperties = Properties()
             if (!proxy.isBlank()) {
-                sysProperties.setProperty("http.proxyHost",proxy )
-                sysProperties.setProperty("https.proxyHost",proxy )
+                sysProperties.setProperty("http.proxyHost", proxy)
+                sysProperties.setProperty("https.proxyHost", proxy)
             }
             if (!proxyPort.isBlank()) {
                 sysProperties.setProperty("http.proxyPort", proxyPort)
@@ -104,9 +104,9 @@ class JiraUtil{
                 issuesMap: MutableMap<String, MutableMap<String, String>>,
                 storedIssuesByLine: MutableList<String>): MutableMap<String, MutableMap<String, String>> {
 
-            val newIssuesMap = mutableMapOf<String, MutableMap<String,String>>()
-            for(issueKey in issuesMap.keys){
-                if (!storedIssuesByLine.toString().contains(issueKey)){
+            val newIssuesMap = mutableMapOf<String, MutableMap<String, String>>()
+            issuesMap.keys.forEach { issueKey ->
+                if (issueKey !in storedIssuesByLine.toString()) {
                     newIssuesMap.putIfAbsent(issueKey, issuesMap.get(issueKey)!!)
                 }
             }
@@ -115,11 +115,10 @@ class JiraUtil{
         }
 
 
-
         /**
          * Update the list of local stored issues that are working in progress.
          * @property storedIssuesByPriority the issues that are stored locally.
-         * @property issuesMap the issues returned by the Jira filter.
+         * @property issuesDataFilterMap the issues returned by the Jira filter.
          * @property newIssuesMap the issues detected as new.
          * @property priorities the list of priorities in JIRA.
          * @property priorityName the name of the tag element that represents priority in JIRA.
@@ -130,15 +129,15 @@ class JiraUtil{
                 issuesDataFilterMap: MutableMap<String, MutableMap<String, String>>,
                 newIssuesMap: MutableMap<String, MutableMap<String, String>>,
                 priorities: List<String>,
-                priorityName: String): ArrayList<String> {
+                priorityName: String): List<String> {
 
-            var storedIssuesByLineUpdated = arrayOfNulls<String>(priorities.size)
+            val storedIssuesByLineUpdated = arrayOfNulls<String>(priorities.size)
 
             var i = 0
             // Store the issues that are still in working progress
-            for (storedIssuesLine in storedIssuesByPriority){
+            storedIssuesByPriority.forEach { storedIssuesLine ->
                 // The issues are separated by ';'
-                val issues : List<String> = storedIssuesLine.split(";")
+                val issues = storedIssuesLine.split(";")
                 val sb = StringBuilder()
                 for (issueKey in issues) {
                     // Issues that were already in the file and they're still in working progress
@@ -150,18 +149,17 @@ class JiraUtil{
                 i++
             }
             // Store the issues that are new in their right line (line represents a priority)
-            for(newIssue in newIssuesMap){
+            newIssuesMap.forEach { newIssue ->
                 val priority = newIssue.value.get(priorityName)
                 val position = priorities.indexOf(priority)
                 if (storedIssuesByLineUpdated[position] != null) {
                     storedIssuesByLineUpdated[position] = storedIssuesByLineUpdated[position] + newIssue.key + ";"
-                }else{
+                } else {
                     storedIssuesByLineUpdated[position] = newIssue.key + ";"
                 }
-
             }
-            // Convert to ArrayList<String>
-            return convertToArrayList(storedIssuesByLineUpdated)
+            // Convert to List<String>
+            return storedIssuesByLineUpdated.toMutableList().filterNotNull()
         }
 
         /**
@@ -177,7 +175,7 @@ class JiraUtil{
                 keyElementTagName: String): MutableMap<String, MutableMap<String, String>> {
 
             // Map that contains the ID issue and a map with all the properties of the issue
-            val issuesMap = mutableMapOf<String, MutableMap<String,String>>()
+            val issuesMap = mutableMapOf<String, MutableMap<String, String>>()
 
             // Parse string to Document
             val xmlDataInputStream = ByteArrayInputStream(xmlDataJiraFilter.toByteArray(Charsets.UTF_8))
@@ -187,17 +185,17 @@ class JiraUtil{
             val issues: NodeList = xmlDataDoc.getElementsByTagName(elementTagName)
 
             // Putting each element of each issue in a map
-            for(i in 0..issues.length - 1){
+            for (i in 0 until issues.length) {
 
-                var issue: org.w3c.dom.Node? = issues.item(i)
+                val issue: org.w3c.dom.Node? = issues.item(i)
 
                 if (Node.ELEMENT_NODE.equals(issue?.nodeType)) {
 
                     val elem = issue as Element
                     val issueId = elem.getElementsByTagName(keyElementTagName).item(0).textContent
-                    val elementIssuesMap = mutableMapOf<String,String>()
+                    val elementIssuesMap = mutableMapOf<String, String>()
                     val elemChildNodes: NodeList = elem.childNodes
-                    for(j in 0..elemChildNodes.length - 1) {
+                    for (j in 0 until elemChildNodes.length) {
                         elementIssuesMap.putIfAbsent(elemChildNodes.item(j).nodeName, elemChildNodes.item(j).textContent)
                     }
                     // Add to the global map
@@ -207,21 +205,5 @@ class JiraUtil{
             return issuesMap
         }
 
-        /**
-         * Convert from array to array list.
-         * @property array
-         * @return an array list.
-         */
-        private fun convertToArrayList(array: Array<String?>): ArrayList<String> {
-            val arrayList : ArrayList<String> = ArrayList<String>()
-            for(j in 0..array.size - 1){
-                var line = ""
-                if (array[j] != null){
-                    line = array[j]!!
-                }
-                arrayList.add(line)
-            }
-            return arrayList
-        }
     }
 }

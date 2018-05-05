@@ -1,13 +1,14 @@
 package com.nji.util
 
 import com.nji.conf.SlackSubfield
-import com.ullink.slack.simpleslackapi.*
+import com.ullink.slack.simpleslackapi.SlackAttachment
+import com.ullink.slack.simpleslackapi.SlackPreparedMessage
 import com.ullink.slack.simpleslackapi.impl.SlackSessionFactory
 import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
 
 
-class SlackUtil{
+class SlackUtil {
 
 
     companion object {
@@ -28,27 +29,25 @@ class SlackUtil{
                 channels: List<String>,
                 colors: List<String>,
                 fields: MutableMap<String, String>,
-                subfields: MutableMap<String, SlackSubfield>,
+                subFields: MutableMap<String, SlackSubfield>,
                 priorityName: String,
                 priorities: List<String>,
-                proxy: String,
-                proxyPort: String,
                 newIssuesMap: MutableMap<String, MutableMap<String, String>>) {
 
-            val session : SlackSession = SlackSessionFactory.createWebSocketSlackSession(token)
+            val session = SlackSessionFactory.createWebSocketSlackSession(token)
 
             if (!session.isConnected) {
                 session.connect()
             }
 
-            for(priority in priorities){
-                for(issue in newIssuesMap){
+            priorities.forEach {
+                newIssuesMap.forEach { issue ->
                     val priorityIssue = issue.value[priorityName]
-                    if (priority == priorityIssue){
+                    if (it == priorityIssue) {
                         val position = priorities.indexOf(priorityIssue)
-                        val channel : SlackChannel = session.findChannelByName(channels[position])
-                        val color : String = colors[position]
-                        session.sendMessage(channel,buildSlackMessage(fields, subfields, issue.value, color))
+                        val channel = session.findChannelByName(channels[position])
+                        val color = colors[position]
+                        session.sendMessage(channel, buildSlackMessage(fields, subFields, issue.value, color))
                         logger.info("Message sent to Slack: {}", issue.key)
 
                     }
@@ -69,7 +68,7 @@ class SlackUtil{
          */
         private fun buildSlackMessage(
                 fields: MutableMap<String, String>,
-                subfields: MutableMap<String, SlackSubfield>,
+                subFields: MutableMap<String, SlackSubfield>,
                 issue: MutableMap<String, String>,
                 color: String): SlackPreparedMessage? {
 
@@ -84,8 +83,8 @@ class SlackUtil{
                 slackAttachment.text = textFormatted
             }
 
-            for(subfield in subfields.values){
-                slackAttachment.addField(subfield.title, issue[subfield.value], subfield.short)
+            for (subField in subFields.values) {
+                slackAttachment.addField(subField.title, issue[subField.value], subField.short)
             }
 
             //build a message object

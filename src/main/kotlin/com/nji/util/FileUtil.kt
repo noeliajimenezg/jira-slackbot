@@ -4,7 +4,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.InputStream
 
-class FileUtil{
+class FileUtil {
 
     companion object {
 
@@ -19,7 +19,7 @@ class FileUtil{
 
             val localStoredIssues: InputStream = File(localFileStoredIssues).inputStream()
             val localStoredIssuesLineList = mutableListOf<String>()
-            localStoredIssues.bufferedReader().useLines { lines -> lines.forEach { localStoredIssuesLineList.add(it)} }
+            localStoredIssues.bufferedReader().useLines { lines -> lines.forEach { localStoredIssuesLineList.add(it) } }
             return localStoredIssuesLineList
         }
 
@@ -28,9 +28,9 @@ class FileUtil{
          * @property storedIssuesByLineUpdated the list of issues ordered by priority.
          * @property localFileStoredIssues path to the file.
          */
-        fun saveIssuesToFile(storedIssuesByLineUpdated: ArrayList<String>, localFileStoredIssues: String) {
+        fun saveIssuesToFile(storedIssuesByLineUpdated: List<String>, localFileStoredIssues: String) {
             File(localFileStoredIssues).bufferedWriter().use { out ->
-                storedIssuesByLineUpdated.forEach{
+                storedIssuesByLineUpdated.forEach {
                     out.append(it + System.lineSeparator())
                 }
             }
