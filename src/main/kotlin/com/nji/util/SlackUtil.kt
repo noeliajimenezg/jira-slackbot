@@ -7,7 +7,7 @@ import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
 
 
-class SlackUtil{
+class SlackUtil {
 
 
     companion object {
@@ -35,20 +35,20 @@ class SlackUtil{
                 proxyPort: String,
                 newIssuesMap: MutableMap<String, MutableMap<String, String>>) {
 
-            val session : SlackSession = SlackSessionFactory.createWebSocketSlackSession(token)
+            val session: SlackSession = SlackSessionFactory.createWebSocketSlackSession(token)
 
             if (!session.isConnected) {
                 session.connect()
             }
 
-            for(priority in priorities){
-                for(issue in newIssuesMap){
+            for (priority in priorities) {
+                for (issue in newIssuesMap) {
                     val priorityIssue = issue.value[priorityName]
-                    if (priority == priorityIssue){
+                    if (priority == priorityIssue) {
                         val position = priorities.indexOf(priorityIssue)
-                        val channel : SlackChannel = session.findChannelByName(channels[position])
-                        val color : String = colors[position]
-                        session.sendMessage(channel,buildSlackMessage(fields, subfields, issue.value, color))
+                        val channel: SlackChannel = session.findChannelByName(channels[position])
+                        val color: String = colors[position]
+                        session.sendMessage(channel, buildSlackMessage(fields, subfields, issue.value, color))
                         logger.info("Message sent to Slack: {}", issue.key)
 
                     }
@@ -84,7 +84,7 @@ class SlackUtil{
                 slackAttachment.text = textFormatted
             }
 
-            for(subfield in subfields.values){
+            for (subfield in subfields.values) {
                 slackAttachment.addField(subfield.title, issue[subfield.value], subfield.short)
             }
 
