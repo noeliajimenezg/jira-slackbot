@@ -1,6 +1,4 @@
 language: java
 jdk:
   - oraclejdk8
-script:
-  - gradle check
-  - gradle build
+install: gradle wrapper --gradle-version 4.7
