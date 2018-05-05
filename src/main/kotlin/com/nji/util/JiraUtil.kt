@@ -9,11 +9,10 @@ import org.springframework.http.HttpStatus
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.io.ByteArrayInputStream
+import java.util.*
 import javax.naming.AuthenticationException
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.soap.Node
-import kotlin.collections.ArrayList
-import java.util.*
 
 
 class JiraUtil {
@@ -58,9 +57,9 @@ class JiraUtil {
                 url: String,
                 filterId: String): String {
 
-            val auth = String(Base64.encode(username + ":" + password))
+            val auth = String(Base64.encode("$username:$password"))
             val client = Client.create()
-            val webResource = client.resource(url + "/sr/jira.issueviews:searchrequest-xml/" + filterId + "/SearchRequest-" + filterId + ".xml?tempMax=1000")
+            val webResource = client.resource("$url/sr/jira.issueviews:searchrequest-xml/$filterId/SearchRequest-$filterId.xml?tempMax=1000")
             val response = webResource.header("Authorization", "Basic $auth")
                     .type("application/json")
                     .accept("application/json")
@@ -104,12 +103,7 @@ class JiraUtil {
                 issuesMap: MutableMap<String, MutableMap<String, String>>,
                 storedIssuesByLine: MutableList<String>): MutableMap<String, MutableMap<String, String>> {
 
-            val newIssuesMap = mutableMapOf<String, MutableMap<String, String>>()
-            for (issueKey in issuesMap.keys) {
-                if (!storedIssuesByLine.toString().contains(issueKey)) {
-                    newIssuesMap.putIfAbsent(issueKey, issuesMap.get(issueKey)!!)
-                }
-            }
+            val newIssuesMap = issuesMap.filter { it.key !in storedIssuesByLine.toString() }.toMutableMap()
             logger.info("New anomalies detected: {}", newIssuesMap.size)
             return newIssuesMap
         }
@@ -126,41 +120,70 @@ class JiraUtil {
          */
         fun updateStoredIssues(
                 storedIssuesByPriority: MutableList<String>,
-                issuesDataFilterMap: MutableMap<String, MutableMap<String, String>>,
+                issuesMap: MutableMap<String, MutableMap<String, String>>,
                 newIssuesMap: MutableMap<String, MutableMap<String, String>>,
                 priorities: List<String>,
-                priorityName: String): ArrayList<String> {
+                priorityName: String): List<String> {
 
-            var storedIssuesByLineUpdated = arrayOfNulls<String>(priorities.size)
-
-            var i = 0
+            var storedIssuesUpdated = arrayOfNulls<String>(priorities.size)
             // Store the issues that are still in working progress
+            updateIssuesStillInProgress(storedIssuesUpdated, storedIssuesByPriority, issuesMap)
+            // Store the issues that are new in their right line (line represents a priority)
+            addNewIssues(storedIssuesUpdated, newIssuesMap, priorityName, priorities)
+
+            return storedIssuesUpdated.toMutableList().filterNotNull()
+        }
+
+        /**
+         * Add new issues to the stored issues in the right line that represents the priority.
+         * @property storedIssuesUpdated the issues that will be stored locally.
+         * @property newIssuesMap the issues detected as new.
+         * @property priorityName the name of the tag element that represents priority in JIRA.
+         * @property priorities the list of priorities in JIRA.
+         */
+        private fun addNewIssues(
+                storedIssuesUpdated: Array<String?>,
+                newIssuesMap: MutableMap<String, MutableMap<String, String>>,
+                priorityName: String,
+                priorities: List<String>) {
+
+            newIssuesMap.forEach { newIssue ->
+                val priority = newIssue.value[priorityName]
+                val position = priorities.indexOf(priority)
+                if (storedIssuesUpdated[position] != null) {
+                    storedIssuesUpdated[position] = storedIssuesUpdated[position] + newIssue.key + ";"
+                } else {
+                    storedIssuesUpdated[position] = newIssue.key + ";"
+                }
+            }
+        }
+
+        /**
+         * Delete the issues that were already resolved.
+         * @property storedIssuesUpdated the issues that will be stored locally.
+         * @property storedIssuesByPriority the issues stored until this moment.
+         * @property issuesMap the issues from JIRA.
+         */
+        private fun updateIssuesStillInProgress(
+                storedIssuesUpdated: Array<String?>,
+                storedIssuesByPriority: MutableList<String>,
+                issuesMap: MutableMap<String, MutableMap<String, String>>) {
+
+            // Store the issues that are still in working progress
+            var i = 0
             for (storedIssuesLine in storedIssuesByPriority) {
                 // The issues are separated by ';'
                 val issues: List<String> = storedIssuesLine.split(";")
                 val sb = StringBuilder()
                 for (issueKey in issues) {
                     // Issues that were already in the file and they're still in working progress
-                    if (issuesDataFilterMap.containsKey(issueKey)) {
+                    if (issuesMap.containsKey(issueKey)) {
                         sb.append(issueKey).append(";")
                     }
                 }
-                storedIssuesByLineUpdated[i] = sb.toString()
+                storedIssuesUpdated[i] = sb.toString()
                 i++
             }
-            // Store the issues that are new in their right line (line represents a priority)
-            for (newIssue in newIssuesMap) {
-                val priority = newIssue.value.get(priorityName)
-                val position = priorities.indexOf(priority)
-                if (storedIssuesByLineUpdated[position] != null) {
-                    storedIssuesByLineUpdated[position] = storedIssuesByLineUpdated[position] + newIssue.key + ";"
-                } else {
-                    storedIssuesByLineUpdated[position] = newIssue.key + ";"
-                }
-
-            }
-            // Convert to ArrayList<String>
-            return convertToArrayList(storedIssuesByLineUpdated)
         }
 
         /**
@@ -188,7 +211,7 @@ class JiraUtil {
             // Putting each element of each issue in a map
             for (i in 0..issues.length - 1) {
 
-                var issue: org.w3c.dom.Node? = issues.item(i)
+                val issue: org.w3c.dom.Node? = issues.item(i)
 
                 if (Node.ELEMENT_NODE.equals(issue?.nodeType)) {
 
@@ -196,7 +219,7 @@ class JiraUtil {
                     val issueId = elem.getElementsByTagName(keyElementTagName).item(0).textContent
                     val elementIssuesMap = mutableMapOf<String, String>()
                     val elemChildNodes: NodeList = elem.childNodes
-                    for (j in 0..elemChildNodes.length - 1) {
+                    for (j in 0 until elemChildNodes.length) {
                         elementIssuesMap.putIfAbsent(elemChildNodes.item(j).nodeName, elemChildNodes.item(j).textContent)
                     }
                     // Add to the global map
@@ -206,21 +229,8 @@ class JiraUtil {
             return issuesMap
         }
 
-        /**
-         * Convert from array to array list.
-         * @property array
-         * @return an array list.
-         */
-        private fun convertToArrayList(array: Array<String?>): ArrayList<String> {
-            val arrayList: ArrayList<String> = ArrayList<String>()
-            for (j in 0..array.size - 1) {
-                var line = ""
-                if (array[j] != null) {
-                    line = array[j]!!
-                }
-                arrayList.add(line)
-            }
-            return arrayList
+        private operator fun <E> List<E>.set(position: Int, value: E) {
+            this[position] = value
         }
     }
 }

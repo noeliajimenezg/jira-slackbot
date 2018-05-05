@@ -28,7 +28,7 @@ class FileUtil {
          * @property storedIssuesByLineUpdated the list of issues ordered by priority.
          * @property localFileStoredIssues path to the file.
          */
-        fun saveIssuesToFile(storedIssuesByLineUpdated: ArrayList<String>, localFileStoredIssues: String) {
+        fun saveIssuesToFile(storedIssuesByLineUpdated: List<String>, localFileStoredIssues: String) {
             File(localFileStoredIssues).bufferedWriter().use { out ->
                 storedIssuesByLineUpdated.forEach {
                     out.append(it + System.lineSeparator())
