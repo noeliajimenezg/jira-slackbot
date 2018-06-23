@@ -7,8 +7,13 @@ import org.springframework.stereotype.Component
 @Component
 @ConfigurationProperties(ignoreUnknownFields = true)
 @EnableEncryptableProperties
-class BotConf {
+class BotConf{
 
+    lateinit var cronExpression: String
+    lateinit var proxy: String
+    lateinit var proxyPort: String
+    lateinit var javaHome: String
     val jira = JiraConf()
     var slack = SlackConf()
+    var filtersConf = FiltersConf()
 }

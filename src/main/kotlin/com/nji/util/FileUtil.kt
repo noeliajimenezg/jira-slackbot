@@ -2,6 +2,7 @@ package com.nji.util
 
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.io.FileInputStream
 import java.io.InputStream
 
 class FileUtil {
@@ -17,9 +18,10 @@ class FileUtil {
          */
         fun readStoredIssues(localFileStoredIssues: String): MutableList<String> {
 
-            val localStoredIssues: InputStream = File(localFileStoredIssues).inputStream()
+            val issuesFile = File(localFileStoredIssues)
+            issuesFile.createNewFile() // if file already exists will do nothing
             val localStoredIssuesLineList = mutableListOf<String>()
-            localStoredIssues.bufferedReader().useLines { lines -> lines.forEach { localStoredIssuesLineList.add(it) } }
+            issuesFile.inputStream().bufferedReader().useLines { lines -> lines.forEach { localStoredIssuesLineList.add(it) } }
             return localStoredIssuesLineList
         }
 

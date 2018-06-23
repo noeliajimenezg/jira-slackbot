@@ -1,6 +1,5 @@
 package com.nji.util
 
-
 import com.sun.jersey.api.client.Client
 import com.sun.jersey.api.client.ClientResponse
 import com.sun.jersey.core.util.Base64
@@ -9,11 +8,9 @@ import org.springframework.http.HttpStatus
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.io.ByteArrayInputStream
-import java.util.*
 import javax.naming.AuthenticationException
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.soap.Node
-
 
 class JiraUtil {
 
@@ -21,23 +18,25 @@ class JiraUtil {
 
         val logger = LoggerFactory.getLogger(JiraUtil::class.java)
 
+        val SEPARATOR = ";"
+
         /**
          * Connect to JIRA and get the data from the JIRA filter
          * @property username the JIRA username.
          * @property password the JIRA password.
          * @property url the JIRA client url.
-         * @property filterId the JIRA filter id.
          * @property elementTagName the XML element tag name that represents an issue in JIRA.
          * @property keyElementTagName the XML element tag name that represents an ID in JIRA.
+         * @property filterId the JIRA filter id.
          * @return a map that contains the ID issue and a map with all the properties of the issue.
          */
         fun getDataFromJira(
                 username: String,
                 password: String,
                 url: String,
-                filterId: String,
                 elementTagName: String,
-                keyElementTagName: String): MutableMap<String, MutableMap<String, String>> {
+                keyElementTagName: String,
+                filterId: String): MutableMap<String, MutableMap<String, String>> {
 
             val issuesXml: String = getDataFromJiraFilter(username, password, url, filterId)
             return convertXmlToMap(issuesXml, elementTagName, keyElementTagName)
@@ -72,28 +71,6 @@ class JiraUtil {
         }
 
         /**
-         * Set system properties.
-         * @property proxy
-         * @property proxyPort
-         * @property javaHome
-         */
-        fun setSystemProperties(proxy: String, proxyPort: String, javaHome: String) {
-            val sysProperties: Properties = Properties()
-            if (!proxy.isBlank()) {
-                sysProperties.setProperty("http.proxyHost", proxy)
-                sysProperties.setProperty("https.proxyHost", proxy)
-            }
-            if (!proxyPort.isBlank()) {
-                sysProperties.setProperty("http.proxyPort", proxyPort)
-                sysProperties.setProperty("https.proxyPort", proxyPort)
-            }
-            if (!javaHome.isBlank()) {
-                sysProperties.setProperty("java.home", javaHome)
-            }
-            System.setProperties(sysProperties)
-        }
-
-        /**
          * Detect the new issues.
          * @property issuesMap the issues that are exported.
          * @property storedIssuesByLine local stored issues that were already treated.
@@ -107,7 +84,6 @@ class JiraUtil {
             logger.info("New anomalies detected: {}", newIssuesMap.size)
             return newIssuesMap
         }
-
 
         /**
          * Update the list of local stored issues that are working in progress.
@@ -127,10 +103,9 @@ class JiraUtil {
 
             var storedIssuesUpdated = arrayOfNulls<String>(priorities.size)
             // Store the issues that are still in working progress
-            updateIssuesStillInProgress(storedIssuesUpdated, storedIssuesByPriority, issuesMap)
+            updateIssuesStillInProgress(storedIssuesUpdated, storedIssuesByPriority, issuesMap, priorityName, priorities)
             // Store the issues that are new in their right line (line represents a priority)
             addNewIssues(storedIssuesUpdated, newIssuesMap, priorityName, priorities)
-
             return storedIssuesUpdated.toMutableList().filterNotNull()
         }
 
@@ -149,11 +124,11 @@ class JiraUtil {
 
             newIssuesMap.forEach { newIssue ->
                 val priority = newIssue.value[priorityName]
-                val position = priorities.indexOf(priority)
+                val position = if (priority != null) priorities.indexOf(priority) else 0
                 if (storedIssuesUpdated[position] != null) {
-                    storedIssuesUpdated[position] = storedIssuesUpdated[position] + newIssue.key + ";"
+                    storedIssuesUpdated[position] = storedIssuesUpdated[position] + newIssue.key + SEPARATOR
                 } else {
-                    storedIssuesUpdated[position] = newIssue.key + ";"
+                    storedIssuesUpdated[position] = newIssue.key + SEPARATOR
                 }
             }
         }
@@ -167,22 +142,26 @@ class JiraUtil {
         private fun updateIssuesStillInProgress(
                 storedIssuesUpdated: Array<String?>,
                 storedIssuesByPriority: MutableList<String>,
-                issuesMap: MutableMap<String, MutableMap<String, String>>) {
+                issuesMap: MutableMap<String, MutableMap<String, String>>,
+                priorityName: String,
+                priorities: List<String>) {
 
             // Store the issues that are still in working progress
-            var i = 0
             for (storedIssuesLine in storedIssuesByPriority) {
-                // The issues are separated by ';'
-                val issues: List<String> = storedIssuesLine.split(";")
-                val sb = StringBuilder()
+                val issues: List<String> = storedIssuesLine.split(SEPARATOR)
                 for (issueKey in issues) {
                     // Issues that were already in the file and they're still in working progress
                     if (issuesMap.containsKey(issueKey)) {
-                        sb.append(issueKey).append(";")
+                        val priority = issuesMap.get(issueKey)?.getValue(priorityName)
+                        val position = if (priority != null) priorities.indexOf(priority) else 0
+
+                        if (storedIssuesUpdated[position] != null) {
+                            storedIssuesUpdated[position] = storedIssuesUpdated[position] + issueKey + SEPARATOR
+                        } else {
+                            storedIssuesUpdated[position] = issueKey + SEPARATOR
+                        }
                     }
                 }
-                storedIssuesUpdated[i] = sb.toString()
-                i++
             }
         }
 

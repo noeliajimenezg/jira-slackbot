@@ -29,16 +29,14 @@ apply plugin: 'io.spring.dependency-management'
 
 bootJar {
     baseName = 'jira-slackbot'
-    version =  '1.0.1'
+    version =  '1.0.0'
 }
 
 sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
-    maven {
-        url 'http://repo.spring.io/milestone'
-    }
+    maven { url 'http://repo.spring.io/milestone' }
 }
 
 dependencies {
