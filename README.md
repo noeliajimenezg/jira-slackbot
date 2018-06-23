@@ -47,7 +47,7 @@ The following provides a description of each property in the configuration file.
 `fields.slack-message.title-link`: map between the slack message link and the link of the JIRA issue.  
 `subfields`: map between the differents subfields that could be showed on Slack message and the field of the JIRA issue. New subfields can be added.  
 
-- Filters configuration for each filter
+- Filters configuration for each filter:  
 `filter-id`: ID of the filter from JIRA. It is showed on JIRA url. Example: 16729  
 `slack-token`: token of the Slack application that represents the bot. [Official documentation](https://api.slack.com/slack-apps) to create an Slack application.
 `local-file-stored-issues`: local file that contains the issues already treated. Example: C:\issues.txt 
